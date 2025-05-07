@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from config.cors_config import CorsConfig
 from config.initializer import lifespan
 from kafka.kafka_controller import kafkaController
+from marketing.controller.marketing_controller import marketingRouter
 from websocket.websocket_controller import websocketController
 from kafka.topic_manager import create_kafka_topics
 
@@ -27,6 +28,7 @@ app.state.connections = set()
 # 라우터 등록
 app.include_router(kafkaController)
 app.include_router(websocketController)
+app.include_router(marketingRouter)
 
 # 앱 실행
 if __name__ == "__main__":

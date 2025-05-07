@@ -1,20 +1,20 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import JSONResponse
 
 from marketing.service.marketing_service_impl import MarketingServiceImpl
 
-interviewRouter = APIRouter()
+marketingRouter = APIRouter()
 
 # 의존성 주입
-async def injectMarketingService() -> MarketingServiceImpl:
-    return MarketingServiceImpl()
+async def injectMarketingService(httpRequest: Request) -> MarketingServiceImpl:
+    return MarketingServiceImpl(httpRequest)
 
-@interviewRouter.post("/marketing/create-virtual-data")
+@marketingRouter.post("/marketing/create-virtual-data")
 async def generateVirtualMarketingData(
-    marketingDataService: MarketingServiceImpl = Depends(injectMarketingService)
+    marketingService: MarketingServiceImpl = Depends(injectMarketingService)
 ):
     try:
-        marketingDataService.generateVirtualMarketingData()
+        marketingService.generateVirtualMarketingData()
 
         return JSONResponse(
             status_code=status.HTTP_201_CREATED,
@@ -23,4 +23,17 @@ async def generateVirtualMarketingData(
 
     except Exception as e:
         print(f"❌ Error in generateMarketingData(): {str(e)}")
+        raise HTTPException(status_code=500, detail="서버 내부 오류 발생")
+
+@marketingRouter.post("/marketing/analysis-virtual-data")
+async def requestAnalysis(
+    marketingService: MarketingServiceImpl = Depends(injectMarketingService)
+):
+    try:
+        result = await marketingService.requestAnalysis()
+
+        return JSONResponse(status_code=202, content=result)
+
+    except Exception as e:
+        print(f"❌ Error in requestAnalysis(): {str(e)}")
         raise HTTPException(status_code=500, detail="서버 내부 오류 발생")

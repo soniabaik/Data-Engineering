@@ -1,4 +1,7 @@
 from random import choices, randint
+from fastapi import Request
+from datetime import datetime
+import json
 
 from marketing.entity.marketing_data import MarketingData
 from marketing.entity.campaign_type import CampaignType
@@ -9,7 +12,8 @@ from marketing.service.marketing_service import MarketingService
 
 
 class MarketingServiceImpl(MarketingService):
-    def __init__(self):
+    def __init__(self, httpRequest: Request):
+        self.httpRequest = httpRequest
         self.marketingRepository = MarketingRepositoryImpl()
 
     def __generateSingle(self) -> MarketingData:
@@ -61,4 +65,57 @@ class MarketingServiceImpl(MarketingService):
         virtual_data_list = [self.__generateSingle() for _ in range(100)]
         self.marketingRepository.bulkCreate(virtual_data_list)
         return {"status": "success", "count": len(virtual_data_list)}
+
+    def __serialize(self, data):
+        return {
+            "customer_id": data.customer_id,
+            "age": data.age,
+            "gender": data.gender.value,
+            "campaign_id": data.campaign_id,
+            "campaign_type": data.campaign_type.value,
+            "user_response": data.user_response.value,
+        }
+
+    async def requestAnalysis(self):
+        try:
+            # 1. 데이터 조회
+            marketing_data_list = self.marketingRepository.findAll()
+
+            # 2. 직렬화
+            serialized_data = [self.__serialize(data) for data in marketing_data_list]
+
+            # 3. 메시지 구성
+            analysis_message = {
+                "request_id": "analysis_" + str(randint(100000, 999999)),
+                "analysis_type": "CTR_CVR_SUMMARY",
+                "timestamp": datetime.utcnow().isoformat(),
+                "data": serialized_data
+            }
+
+            # 4. Kafka 프로듀서
+            kafka_producer = self.httpRequest.app.state.kafka_producer
+            await kafka_producer.send_and_wait(
+                ANALYSIS_REQUEST_TOPIC,
+                json.dumps(analysis_message).encode("utf-8")
+            )
+
+            return {
+                "success": True,
+                "message": "분석 요청이 전송되었습니다.",
+                "request_id": analysis_message["request_id"]
+            }
+
+        except Exception as e:
+            print(f"❌ Error in requestAnalysis(): {str(e)}")
+            return {
+                "success": False,
+                "message": "분석 요청 처리 중 오류 발생",
+                "error": str(e)
+            }
+
+        return {
+            "success": True,
+            "message": "분석 요청이 전송되었습니다.",
+            "request_id": analysis_message["request_id"]
+        }
 
