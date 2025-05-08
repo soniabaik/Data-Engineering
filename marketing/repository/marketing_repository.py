@@ -8,3 +8,7 @@ class MarketingRepository(ABC):
     @abstractmethod
     def bulkCreate(self, data: List[MarketingData]) -> None:
         pass
+
+    @abstractmethod
+    def findAll(self) -> List[MarketingData]:
+        pass

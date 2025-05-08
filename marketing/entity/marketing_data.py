@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, field_validator
 
 from marketing.entity.campaign_type import CampaignType
 from marketing.entity.gender import Gender
@@ -9,7 +9,6 @@ class MarketingData(BaseModel):
     customer_id: int
     age: int
     gender: Gender
-    campaign_id: str
     campaign_type: CampaignType
     user_response: UserResponseType
 

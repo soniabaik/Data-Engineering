@@ -1,20 +1,23 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import JSONResponse
 
+from aiomysql import Pool
+
+from async_db.database import getMySqlPool
 from marketing.service.marketing_service_impl import MarketingServiceImpl
 
 marketingRouter = APIRouter()
 
 # 의존성 주입
-async def injectMarketingService(httpRequest: Request) -> MarketingServiceImpl:
-    return MarketingServiceImpl(httpRequest)
+async def injectMarketingService(httpRequest: Request, db_pool: Pool = Depends(getMySqlPool)) -> MarketingServiceImpl:
+    return MarketingServiceImpl(httpRequest, db_pool)
 
 @marketingRouter.post("/marketing/create-virtual-data")
 async def generateVirtualMarketingData(
     marketingService: MarketingServiceImpl = Depends(injectMarketingService)
 ):
     try:
-        marketingService.generateVirtualMarketingData()
+        await marketingService.generateVirtualMarketingData()
 
         return JSONResponse(
             status_code=status.HTTP_201_CREATED,

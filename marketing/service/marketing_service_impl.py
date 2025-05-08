@@ -3,6 +3,9 @@ from fastapi import Request
 from datetime import datetime
 import json
 
+from aiomysql import Pool
+
+from kafka.constant.constant_config import ANALYSIS_REQUEST_TOPIC
 from marketing.entity.marketing_data import MarketingData
 from marketing.entity.campaign_type import CampaignType
 from marketing.entity.gender import Gender
@@ -12,9 +15,9 @@ from marketing.service.marketing_service import MarketingService
 
 
 class MarketingServiceImpl(MarketingService):
-    def __init__(self, httpRequest: Request):
+    def __init__(self, httpRequest: Request, db_pool: Pool):
         self.httpRequest = httpRequest
-        self.marketingRepository = MarketingRepositoryImpl()
+        self.marketingRepository = MarketingRepositoryImpl(db_pool)
 
     def __generateSingle(self) -> MarketingData:
         # 성별: 여성 60%, 남성 40%
@@ -39,7 +42,7 @@ class MarketingServiceImpl(MarketingService):
             age = randint(18, 65)
 
         # 캠페인 타입: Email 고정
-        campaign_type = CampaignType.EMAIL
+        campaign_type = CampaignType.email
 
         # 유저 응답: 무시 10%, 클릭 70%, 구매 20%
         user_response = choices(
@@ -56,14 +59,13 @@ class MarketingServiceImpl(MarketingService):
             customer_id=randint(1000, 9999),
             age=age,
             gender=gender,
-            campaign_id=str(randint(100000, 999999)),
             campaign_type=campaign_type,
             user_response=user_response
         )
 
-    def generateVirtualMarketingData(self):
+    async def generateVirtualMarketingData(self):
         virtual_data_list = [self.__generateSingle() for _ in range(100)]
-        self.marketingRepository.bulkCreate(virtual_data_list)
+        await self.marketingRepository.bulkCreate(virtual_data_list)
         return {"status": "success", "count": len(virtual_data_list)}
 
     def __serialize(self, data):
@@ -112,10 +114,3 @@ class MarketingServiceImpl(MarketingService):
                 "message": "분석 요청 처리 중 오류 발생",
                 "error": str(e)
             }
-
-        return {
-            "success": True,
-            "message": "분석 요청이 전송되었습니다.",
-            "request_id": analysis_message["request_id"]
-        }
-
