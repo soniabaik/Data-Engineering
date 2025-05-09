@@ -32,10 +32,17 @@ async def init_kafka(app: FastAPI):
         group_id="another_group",
         client_id='fastapi-kafka-consumer'
     )
+    app.state.kafka_analysis_consumer = AIOKafkaConsumer(
+        'ANALYSIS_REQUEST_TOPIC',
+        bootstrap_servers='localhost:9092',
+        group_id="analysis_group",
+        client_id='fastapi-kafka-analysis-consumer'
+    )
 
     await app.state.kafka_producer.start()
     await app.state.kafka_consumer.start()
     await app.state.kafka_test_topic_consumer.start()
+    await app.state.kafka_analysis_consumer.start()
 
     asyncio.create_task(testTopicConsume(app))
 
@@ -50,7 +57,7 @@ async def shutdown_vector_db(app: FastAPI):
         await pool.wait_closed()
 
 async def shutdown_kafka(app: FastAPI):
-    for client in ["kafka_producer", "kafka_consumer", "kafka_test_topic_consumer"]:
+    for client in ["kafka_producer", "kafka_consumer", "kafka_test_topic_consumer", "kafka_analysis_consumer"]:
         if client_obj := getattr(app.state, client, None):
             await client_obj.stop()
 

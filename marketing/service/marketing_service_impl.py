@@ -73,7 +73,6 @@ class MarketingServiceImpl(MarketingService):
             "customer_id": data.customer_id,
             "age": data.age,
             "gender": data.gender.value,
-            "campaign_id": data.campaign_id,
             "campaign_type": data.campaign_type.value,
             "user_response": data.user_response.value,
         }
@@ -81,7 +80,7 @@ class MarketingServiceImpl(MarketingService):
     async def requestAnalysis(self):
         try:
             # 1. 데이터 조회
-            marketing_data_list = self.marketingRepository.findAll()
+            marketing_data_list = await self.marketingRepository.findAll()
 
             # 2. 직렬화
             serialized_data = [self.__serialize(data) for data in marketing_data_list]
