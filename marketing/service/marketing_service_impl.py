@@ -1,3 +1,4 @@
+import uuid
 from random import choices, randint
 from fastapi import Request
 from datetime import datetime
@@ -86,8 +87,9 @@ class MarketingServiceImpl(MarketingService):
             serialized_data = [self.__serialize(data) for data in marketing_data_list]
 
             # 3. 메시지 구성
+            request_id = f"analysis_{uuid.uuid4()}"  # UUID 생성
             analysis_message = {
-                "request_id": "analysis_" + str(randint(100000, 999999)),
+                "request_id": request_id,
                 "analysis_type": "CTR_CVR_SUMMARY",
                 "timestamp": datetime.utcnow().isoformat(),
                 "data": serialized_data
@@ -99,6 +101,10 @@ class MarketingServiceImpl(MarketingService):
                 ANALYSIS_REQUEST_TOPIC,
                 json.dumps(analysis_message).encode("utf-8")
             )
+
+            # # 5. Redis 상태 저장 (queued)
+            # redis = self.httpRequest.app.state.redis
+            # await redis.set(f"analysis_status:{request_id}", "queued")
 
             return {
                 "success": True,

@@ -7,34 +7,38 @@ from async_db.database import getMySqlPool, createTableIfNeccessary
 from vector_db.database import getMongoDBPool
 from kafka.consumer import testTopicConsume
 
+from redis.asyncio import Redis
 
 async def init_mysql(app: FastAPI):
     app.state.dbPool = await getMySqlPool()
     await createTableIfNeccessary(app.state.dbPool)
+
+async def init_redis(app: FastAPI):
+    app.state.redis = Redis(host="localhost", port=6379, decode_responses=True)
 
 async def init_vector_db(app: FastAPI):
     app.state.vectorDBPool = await getMongoDBPool()
 
 async def init_kafka(app: FastAPI):
     app.state.kafka_producer = AIOKafkaProducer(
-        bootstrap_servers='localhost:9092',
+        bootstrap_servers='192.168.1.133:9092',
         client_id='fastapi-kafka-producer'
     )
     app.state.kafka_consumer = AIOKafkaConsumer(
         'completion_topic',
-        bootstrap_servers='localhost:9092',
+        bootstrap_servers='192.168.1.133:9092',
         group_id="my_group",
         client_id='fastapi-kafka-consumer'
     )
     app.state.kafka_test_topic_consumer = AIOKafkaConsumer(
         'test-topic',
-        bootstrap_servers='localhost:9092',
+        bootstrap_servers='192.168.1.133:9092',
         group_id="another_group",
         client_id='fastapi-kafka-consumer'
     )
     app.state.kafka_analysis_consumer = AIOKafkaConsumer(
         'ANALYSIS_REQUEST_TOPIC',
-        bootstrap_servers='localhost:9092',
+        bootstrap_servers='192.168.1.133:9092',
         group_id="analysis_group",
         client_id='fastapi-kafka-analysis-consumer'
     )
@@ -50,6 +54,10 @@ async def shutdown_mysql(app: FastAPI):
     if pool := getattr(app.state, 'dbPool', None):
         pool.close()
         await pool.wait_closed()
+
+async def shutdown_redis(app: FastAPI):
+    if redis := getattr(app.state, 'redis', None):
+        await redis.close()
 
 async def shutdown_vector_db(app: FastAPI):
     if pool := getattr(app.state, 'vectorDBPool', None):
@@ -67,12 +75,14 @@ async def lifespan(app: FastAPI):
         app.state.stop_event = asyncio.Event()
 
         await init_mysql(app)
+        await init_redis(app)
         await init_vector_db(app)
         await init_kafka(app)
 
         yield
     finally:
         await shutdown_mysql(app)
+        await shutdown_redis(app)
         await shutdown_vector_db(app)
         app.state.stop_event.set()
         await shutdown_kafka(app)

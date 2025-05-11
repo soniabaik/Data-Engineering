@@ -5,7 +5,7 @@ from aiokafka.errors import TopicAlreadyExistsError
 
 async def create_kafka_topics():
     adminClient = AIOKafkaAdminClient(
-        bootstrap_servers='localhost:9092',
+        bootstrap_servers='192.168.1.133:9092',
         loop=asyncio.get_running_loop()
     )
 

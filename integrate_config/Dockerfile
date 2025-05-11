@@ -1,21 +1,32 @@
 FROM bitnami/spark:latest
 
-# 루트 사용자로 전환
+# Switch to root user for installing packages and creating directories
 USER root
 
-# 필요한 디렉터리 생성
+# Ensure apt lists directory exists
 RUN mkdir -p /var/lib/apt/lists/partial
 
-# apt-get 업데이트 및 curl 설치
-RUN apt-get update && apt-get install -y curl
+# Clean apt cache and update apt-get
+RUN apt-get clean && apt-get update -o Dir::Cache::apt::Archives=/var/cache/apt/archives
 
-# 작업 디렉토리 생성 및 권한 부여
+# Install necessary packages
+RUN apt-get install -y krb5-user curl
+
+# Create necessary directories and adjust permissions
 RUN mkdir -p /opt/bitnami/spark/jobs
 RUN chmod -R 777 /opt/bitnami/spark/jobs
 
-# Spark 의존성 JAR 파일을 자동으로 다운로드하는 스크립트 추가
+# Download Spark SQL Kafka JAR files
 RUN curl -sL https://repo1.maven.org/maven2/org/apache/spark/spark-sql-kafka-0-10_2.12/3.1.2/spark-sql-kafka-0-10_2.12-3.1.2.jar -o /opt/bitnami/spark/jars/spark-sql-kafka-0-10_2.12-3.1.2.jar
 RUN curl -sL https://repo1.maven.org/maven2/org/apache/spark/spark-streaming-kafka-0-10_2.12/3.1.2/spark-streaming-kafka-0-10_2.12-3.1.2.jar -o /opt/bitnami/spark/jars/spark-streaming-kafka-0-10_2.12-3.1.2.jar
 
-# 분석 스트림 스크립트 복사
+# Download Kafka client libraries
+RUN curl -sL https://repo1.maven.org/maven2/org/apache/kafka/kafka-clients/2.8.1/kafka-clients-2.8.1.jar -o /opt/bitnami/spark/jars/kafka-clients-2.8.1.jar
+RUN curl -sL https://repo1.maven.org/maven2/org/apache/commons/commons-pool2/2.11.1/commons-pool2-2.11.1.jar -o /opt/bitnami/spark/jars/commons-pool2-2.11.1.jar
+RUN curl -sL https://repo1.maven.org/maven2/com/google/code/gson/gson/2.8.9/gson-2.8.9.jar -o /opt/bitnami/spark/jars/gson-2.8.9.jar
+
+# Copy your stream analysis script
 COPY ./analysis_stream.py /opt/bitnami/spark/jobs/analysis_stream.py
+
+# Return to non-root user for security
+USER 1001
