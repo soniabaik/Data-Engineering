@@ -98,7 +98,7 @@ class MarketingServiceImpl(MarketingService):
             # 4. Kafka 프로듀서
             kafka_producer = self.httpRequest.app.state.kafka_producer
             await kafka_producer.send_and_wait(
-                ANALYSIS_REQUEST_TOPIC,
+                "marketing.analysis.request",
                 json.dumps(analysis_message).encode("utf-8")
             )
 

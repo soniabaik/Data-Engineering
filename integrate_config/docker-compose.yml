@@ -75,12 +75,14 @@ services:
       - "9000:9000"
     environment:
       - CLUSTER_NAME=test
-      - CORE_CONF_fs_defaultFS=hdfs://hadoop:9000  # 수정된 부분
+      - CORE_CONF_fs_defaultFS=hdfs://hadoop:9000
       - CORE_CONF_hadoop_security_authentication=simple
       - HDFS_CONF_dfs_replication=1
       - HDFS_CONF_dfs_namenode_datanode_registration_ip___hostname___check=false
     volumes:
       - ./data/hadoop:/hadoop/dfs
+      - ./hadoop-config/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml
+      - ./hadoop-config/hdfs-site.xml:/opt/hadoop/etc/hadoop/hdfs-site.xml
     networks:
       - data-pipeline-net
 
@@ -93,13 +95,16 @@ services:
       - data-pipeline-net
 
   kafka:
-    container_name: kafka-container
+    container_name: kafka
     image: wurstmeister/kafka
     ports:
       - "9092:9092"
+      - "29092:29092"
     environment:
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://192.168.1.133:9092
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,INTERNAL://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,INTERNAL://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_ZOOKEEPER_CONNECT: zookeeper-container:2181
       KAFKA_CREATE_TOPICS: "test-topic:1:1,marketing.analysis.request:1:1"
     networks:
@@ -112,11 +117,15 @@ services:
     container_name: spark-master
     environment:
       - SPARK_MODE=master
+      - SPARK_LOCAL_DIRS=/opt/bitnami/spark/.ivy2/local
+      - IVY_HOME=/opt/bitnami/spark/.ivy2
+      - SPARK_HOME=/opt/bitnami/spark
     ports:
       - "7077:7077"
       - "8080:8080"
     volumes:
       - ./:/opt/bitnami/spark/jobs
+      - /opt/bitnami/spark/.ivy2:/opt/bitnami/spark/.ivy2
     networks:
       - data-pipeline-net
 
@@ -126,6 +135,9 @@ services:
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_LOCAL_DIRS=/opt/bitnami/spark/.ivy2/local
+      - IVY_HOME=/opt/bitnami/spark/.ivy2
+      - SPARK_HOME=/opt/bitnami/spark
     depends_on:
       - spark-master
     ports:
