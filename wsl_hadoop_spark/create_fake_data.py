@@ -1,7 +1,7 @@
 from hdfs import InsecureClient
 import os
 
-HDFS_USER = "hadoop-hdfs-user"
+HDFS_USER = "eddi"
 HDFS_URL = "http://localhost:9870"
 
 local_path = "/opt/shared_data/input.txt"

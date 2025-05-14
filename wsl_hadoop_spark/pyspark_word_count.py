@@ -6,13 +6,13 @@ sc = SparkContext(appName="WordCount")
 
 HDFS_HOST = "localhost"
 HDFS_PORT = 9000
-HDFS_USER = "hadoop-hdfs-user"
+HDFS_USER = "eddi"
 
 input_path = f"hdfs://{HDFS_HOST}:{HDFS_PORT}/user/{HDFS_USER}/wordcount/input.txt"
 output_path = f"hdfs://{HDFS_HOST}:{HDFS_PORT}/user/{HDFS_USER}/wordcount/output"
 
 # 기존 output 폴더 제거 (디렉토리가 없으면 무시)
-hadoop_home = "/home/hadoop-hdfs-user/sw/hadoop-3.3.4"
+hadoop_home = "/home/eddi/sw/hadoop-3.3.4"
 try:
     result = subprocess.run([
         f"{hadoop_home}/bin/hdfs", "dfs", "-rm", "-r", f"/user/{HDFS_USER}/wordcount/output"
