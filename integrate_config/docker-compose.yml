@@ -32,7 +32,8 @@ services:
       - ./dags:/opt/airflow/dags
     ports:
       - "8082:8080"
-    command: webserver
+    command: >
+      bash -c "pip install --no-cache-dir kafka-python && exec airflow webserver"
     networks:
       - data-pipeline-net
 
@@ -48,21 +49,24 @@ services:
       AIRFLOW__CORE__BROKER_URL: redis://redis:6379/0
     volumes:
       - ./dags:/opt/airflow/dags
-    command: scheduler
+    command: >
+      bash -c "pip install --no-cache-dir kafka-python && exec airflow scheduler"
     networks:
       - data-pipeline-net
 
   airflow-flower:
     image: apache/airflow:2.9.1
-    depends_on:
-      - airflow-webserver
-      - airflow-scheduler
-    environment:
-      AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+    command: celery flower
     ports:
       - "5555:5555"
-    command: flower
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow  # 추가
+    depends_on:
+      - redis
+      - airflow-webserver
     networks:
       - data-pipeline-net
 

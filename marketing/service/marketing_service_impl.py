@@ -65,6 +65,11 @@ class MarketingServiceImpl(MarketingService):
         )
 
     async def generateVirtualMarketingData(self):
+        virtual_data = self.__generateSingle()
+        await self.marketingRepository.create(virtual_data)
+        return {"status": "success", "data": virtual_data}
+
+    async def generateVirtualMarketingDataSet(self):
         virtual_data_list = [self.__generateSingle() for _ in range(100)]
         await self.marketingRepository.bulkCreate(virtual_data_list)
         return {"status": "success", "count": len(virtual_data_list)}
@@ -119,3 +124,7 @@ class MarketingServiceImpl(MarketingService):
                 "message": "분석 요청 처리 중 오류 발생",
                 "error": str(e)
             }
+
+    async def requestDataList(self):
+        return await self.marketingRepository.findAll()
+
