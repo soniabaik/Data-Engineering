@@ -30,3 +30,10 @@ async def publish_message(request: Request):
     message = body.get("message")
 
     return await service.publish(topic, message)
+
+@kafkaManageRouter.post("/subscribe")
+async def subscribe_topic(request: Request):
+    body = await request.json()
+    topic = body.get("topic")
+
+    return await service.subscribe(topic)
