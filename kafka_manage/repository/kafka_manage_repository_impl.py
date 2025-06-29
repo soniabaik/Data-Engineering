@@ -53,15 +53,27 @@ class KafkaManageRepositoryImpl(KafkaManageRepository):
         await self.producer.send_and_wait(topic, json.dumps(message).encode('utf-8'))
 
     async def subscribe(self, topic: str) -> dict:
+        # Kafka 토픽에 대한 소비 작업을 시작 할 때
+        # 이미 해당 토픽에 대해 소비 중이라면 중복으로 구독하는 것을 방지해야 합니다.
         if topic in self.consumer_tasks:
             return { "message": f"이미 '{topic}' 을 구독하고 있습니다." }
 
+        # 비동기 태스크를 구성함.
+        # 비동기 태스크에서 __consume_loop() 가 구동됨.
+        # 실제로 __consume_loop는 타 언어로 치면 private consume_loop와 같은 것임.
+        # 위와 같이 구성함으로서 실제 백그라운드에서 지속적으로 메시지를 구독할 수 있음.
+        # 생성한 Task를 구독자 리스트로 관리하여 추후 상태를 관리하기 위한 목적으로 배치하였음.
         task = asyncio.create_task(self.__consume_loop(topic))
         self.consumer_tasks[topic] = task
 
         return { "message": f"'{topic}' 컨슈머 구동" }
 
     async def __consume_loop(self, topic: str):
+        # Kafka 토픽으로부터 메시지를 지속적으로 수신하는 루프
+        # KafkaConsumer의 경우엔 소비할 Kafka Topic을 지정해야 합니다.
+        # 또한 Kafka 브로커 주소가 필요하고
+        # 같은 그룹 ID를 가진 여러 구독자들이 파티션을 분산 처리 할 수 있도록 group_id 또한 지정해줍니다.
+        # auto_offset_reset='eraliest' 의 경우 처음 실행 시 가장 처음 메시지부터 읽을 수 있도록 만듭니다.
         consumer = AIOKafkaConsumer(
             topic,
             bootstrap_servers=self.bootstrap_servers,
