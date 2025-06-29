@@ -1,5 +1,7 @@
 import asyncio
+import json
 
+from aiokafka import AIOKafkaProducer
 from aiokafka.errors import TopicAlreadyExistsError
 from kafka import KafkaAdminClient
 from kafka.admin import NewTopic
@@ -36,3 +38,10 @@ class KafkaManageRepositoryImpl(KafkaManageRepository):
         # 기타 뭔지 모를 오류가 발생하는 상황
         except Exception as e:
             return { "error": str(e) }
+
+    async def send_message(self, topic: str, message: dict) -> None:
+        if self.producer is None:
+            self.producer = AIOKafkaProducer(bootstrap_servers=self.bootstrap_servers)
+            await self.producer.start()
+
+        await self.producer.send_and_wait(topic, json.dumps(message).encode('utf-8'))
