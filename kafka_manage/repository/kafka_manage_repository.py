@@ -9,4 +9,7 @@ class KafkaManageRepository(ABC):
     @abstractmethod
     async def send_message(self, topic: str, message: dict) -> None:
         pass
-    
+
+    @abstractmethod
+    async def subscribe(self, topic: str) -> dict:
+        pass

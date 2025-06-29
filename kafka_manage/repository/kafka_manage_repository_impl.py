@@ -1,7 +1,7 @@
 import asyncio
 import json
 
-from aiokafka import AIOKafkaProducer
+from aiokafka import AIOKafkaProducer, AIOKafkaConsumer
 from aiokafka.errors import TopicAlreadyExistsError
 from kafka import KafkaAdminClient
 from kafka.admin import NewTopic
@@ -41,7 +41,39 @@ class KafkaManageRepositoryImpl(KafkaManageRepository):
 
     async def send_message(self, topic: str, message: dict) -> None:
         if self.producer is None:
+            # AIOKafkaProducer의 경우 kafka에 연결하기 위한 비동기 프로듀서 객체를 생성합니다.
+            # kafka 브로커로 앞서 구성한 localhost:9094를 선택합니다.
+            # 이후 만들어진 producer를 start()를 통해 실행합니다.
             self.producer = AIOKafkaProducer(bootstrap_servers=self.bootstrap_servers)
             await self.producer.start()
 
+        # 특정 토픽에 메시지를 전송합니다.
+        # 메시지를 해당 토픽의 적절한 파티션에 할당
+        # 브로커에게 메시지를 전송
         await self.producer.send_and_wait(topic, json.dumps(message).encode('utf-8'))
+
+    async def subscribe(self, topic: str) -> dict:
+        if topic in self.consumer_tasks:
+            return { "message": f"이미 '{topic}' 을 구독하고 있습니다." }
+
+        task = asyncio.create_task(self.__consume_loop(topic))
+        self.consumer_tasks[topic] = task
+
+        return { "message": f"'{topic}' 컨슈머 구동" }
+
+    async def __consume_loop(self, topic: str):
+        consumer = AIOKafkaConsumer(
+            topic,
+            bootstrap_servers=self.bootstrap_servers,
+            group_id=f"group-{topic}",
+            auto_offset_reset="earliest")
+
+        await consumer.start()
+
+        try:
+            async for message in consumer:
+                print(f"[Kafka][{topic}] {message.value.decode('utf-8')}")
+        except Exception as e:
+            print(f"[Kafka][{topic}] {e}")
+        finally:
+            await consumer.stop()

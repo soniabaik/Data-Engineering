@@ -13,3 +13,5 @@ class KafkaManageServiceImpl(KafkaManageService):
         await self.repository.send_message(topic, message)
         return { "status": "메시지 전송 완료" }
 
+    async def subscribe(self, topic: str) -> dict:
+        return await self.repository.subscribe(topic)

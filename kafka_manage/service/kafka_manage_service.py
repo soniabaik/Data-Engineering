@@ -9,3 +9,7 @@ class KafkaManageService(ABC):
     @abstractmethod
     async def publish(self, topic: str, message: dict) -> dict:
         pass
+
+    @abstractmethod
+    async def subscribe(self, topic: str) -> dict:
+        pass
